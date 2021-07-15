@@ -8,6 +8,13 @@
 
 ***
 #### git 사용법
+**초기 설정인 경우 (두 개 다 해야함!)
+   ```
+   git config —global [user.name](http://user.name) "본인 git 이름"
+
+   git config —global [user.email](http://user.email) 본인 email
+   
+   ```
 1. 버전 관리를 진행할 폴더 생성 *필수   
    ```
    git init
