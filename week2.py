@@ -62,20 +62,20 @@
 
 
 #카드
-import sys
-n = int(sys.stdin.readline())
-d = []
-for i in range(n):
-    d.append(int(sys.stdin.readline()))
+# import sys
+# n = int(sys.stdin.readline())
+# d = []
+# for i in range(n):
+#     d.append(int(sys.stdin.readline()))
 
-ct = list(set(d))
+# ct = list(set(d))
 
-lst = []
-for i in range(len(ct)):
-    lst.append([d.count(ct[i]), ct[i]])
-lst.sort(key= lambda x: (x[0], -x[1]), reverse=True)
+# lst = []
+# for i in range(len(ct)):
+#     lst.append([d.count(ct[i]), ct[i]])
+# lst.sort(key= lambda x: (x[0], -x[1]), reverse=True)
 
-print(lst[0][1])
+# print(lst[0][1])
 
 #k번쨰수
 n, k=map(int, input().split())
