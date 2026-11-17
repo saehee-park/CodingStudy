@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>파일 입출력</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2129; --muted: #6b7280;
+    --border: #d9dde3; --accent: #2563eb; --accent-text: #ffffff; --drop: #eef3ff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171b; --panel: #1e2126; --text: #e6e8eb; --muted: #9aa1ab;
+      --border: #343840; --accent: #4f8cff; --accent-text: #0b0d10; --drop: #1f2a40;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 32px 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  h2 { font-size: 1rem; margin: 0 0 12px; }
+  #drop {
+    border: 2px dashed var(--border); border-radius: 8px; padding: 24px; text-align: center;
+    color: var(--muted); cursor: pointer; transition: background .15s, border-color .15s;
+  }
+  #drop.over { background: var(--drop); border-color: var(--accent); color: var(--text); }
+  #info { margin-top: 10px; font-size: .9rem; color: var(--muted); min-height: 1.2em; word-break: break-all; }
+  textarea {
+    width: 100%; min-height: 320px; resize: vertical; padding: 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  input[type=text], select {
+    padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font: inherit;
+  }
+  input[type=text] { flex: 1 1 200px; min-width: 0; }
+  button {
+    padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text); font: inherit; cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  button:hover { filter: brightness(1.05); }
+  #stats { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<main>
+  <h1>파일 입출력</h1>
+  <p class="sub">텍스트 파일을 열어서 내용을 확인·수정하고, 다시 파일로 저장합니다. 모든 처리는 브라우저 안에서만 이루어집니다.</p>
+
+  <section class="panel">
+    <h2>1. 파일 입력</h2>
+    <label id="drop" for="file">
+      파일을 여기로 끌어다 놓거나 <strong>클릭해서 선택</strong>하세요
+    </label>
+    <input id="file" type="file" class="visually-hidden">
+    <div class="row">
+      <label for="encoding">인코딩</label>
+      <select id="encoding">
+        <option value="utf-8">UTF-8</option>
+        <option value="euc-kr">EUC-KR</option>
+        <option value="utf-16le">UTF-16 LE</option>
+      </select>
+    </div>
+    <div id="info"></div>
+  </section>
+
+  <section class="panel">
+    <h2>2. 내용</h2>
+    <textarea id="content" spellcheck="false" placeholder="파일을 열거나 여기에 직접 입력하세요."></textarea>
+    <div id="stats"></div>
+  </section>
+
+  <section class="panel">
+    <h2>3. 파일 출력</h2>
+    <div class="row">
+      <input id="filename" type="text" value="output.txt" aria-label="저장할 파일 이름">
+      <button id="save" class="primary">파일로 저장</button>
+      <button id="copy">클립보드 복사</button>
+      <button id="clear">비우기</button>
+    </div>
+  </section>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const fileInput = $("file"), drop = $("drop"), info = $("info");
+  const content = $("content"), stats = $("stats"), filename = $("filename"), encoding = $("encoding");
+  let lastFile = null;
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1024 / 1024).toFixed(1) + " MB";
+  }
+
+  function updateStats() {
+    const text = content.value;
+    const lines = text === "" ? 0 : text.replace(/\n$/, "").split("\n").length;
+    stats.textContent = `${text.length.toLocaleString()}자 · ${lines.toLocaleString()}줄`;
+  }
+
+  function readFile(file) {
+    lastFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      content.value = reader.result;
+      filename.value = file.name;
+      info.textContent = `불러옴: ${file.name} (${formatSize(file.size)}, ${file.type || "알 수 없는 형식"})`;
+      updateStats();
+    };
+    reader.onerror = () => { info.textContent = "파일을 읽는 중 오류가 발생했습니다."; };
+    reader.readAsText(file, encoding.value);
+  }
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) readFile(fileInput.files[0]);
+    fileInput.value = ""; // 같은 파일을 다시 선택해도 change 이벤트가 발생하도록
+  });
+
+  encoding.addEventListener("change", () => { if (lastFile) readFile(lastFile); });
+
+  ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => {
+    e.preventDefault(); drop.classList.add("over");
+  }));
+  ["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => {
+    e.preventDefault(); drop.classList.remove("over");
+  }));
+  drop.addEventListener("drop", (e) => {
+    const file = e.dataTransfer.files[0];
+    if (file) readFile(file);
+  });
+
+  $("save").addEventListener("click", () => {
+    const name = filename.value.trim() || "output.txt";
+    const blob = new Blob([content.value], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    info.textContent = `저장함: ${name} (${formatSize(blob.size)})`;
+  });
+
+  $("copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(content.value);
+      info.textContent = "클립보드에 복사했습니다.";
+    } catch {
+      info.textContent = "클립보드 복사에 실패했습니다.";
+    }
+  });
+
+  $("clear").addEventListener("click", () => {
+    content.value = ""; lastFile = null; info.textContent = ""; updateStats();
+  });
+
+  content.addEventListener("input", updateStats);
+  updateStats();
+</script>
+</body>
+</html>
